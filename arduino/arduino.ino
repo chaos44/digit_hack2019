@@ -3,14 +3,14 @@
 //#include <linethings_motor.h>
 
 /**
- * 2WD BLE R/C Car for LINE Things development board with TI DRV8830 motor driver
- */
+   2WD BLE R/C Car for LINE Things development board with TI DRV8830 motor driver
+*/
 
 // Device Name: Maximum 30 bytes
 #define DEVICE_NAME "4WD R/C Car DRV8830 - nRF52"
 
 // User service UUID: Change this to your generated service UUID
- #define USER_SERVICE_UUID "8342d390-3478-483c-8bea-6db308de7d04"       //置き換えること
+#define USER_SERVICE_UUID "8342d390-3478-483c-8bea-6db308de7d04"       //置き換えること
 
 // Accelerometer Service UUID
 #define RCCAR_SERVICE_UUID "8922e970-329d-44cb-badb-10070ef94b1d"
@@ -33,25 +33,38 @@ BLECharacteristic rccarCharacteristic;
 BLEService psdiService;
 BLECharacteristic psdiCharacteristic;
 
-//ThingsMotor motorR(MOTOR_ADDR_CN1); // R
-//ThingsMotor motorL(MOTOR_ADDR_CN2); // L
+static void cmd_servo(uint8_t servo_no, uint8_t angle, uint8_t speed);
+static void cmd_motor(uint8_t motor_no, int8_t speed);
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin();
+  device_init();
 
-  Bluefruit.begin();
-  Bluefruit.setName(DEVICE_NAME);
+  //  Bluefruit.begin();
+  //  Bluefruit.setName(DEVICE_NAME);
 
-//  motorR.control(MOTOR_IDLE, 0);
-//  motorL.control(MOTOR_IDLE, 0);
 
-  setupServices();
-  startAdvertising();
+  //  setupServices();
+  //  startAdvertising();
   Serial.println("Ready to Connect");
 }
 
 void loop() {
+  //  i2c_scanner();
+
+  cmd_motor(0, 100);
+  delay(2000);
+  cmd_motor(0, -100);
+  delay(2000);
+  cmd_motor(0, 0);
+  delay(2000);
+  cmd_motor(1, 100);
+  delay(2000);
+  cmd_motor(1, -100);
+  delay(2000);
+  cmd_motor(1, 0);
+  delay(2000);
+
   // printMotorFaultStatus();
   delay(500);
 }
@@ -90,17 +103,17 @@ void motorWriteCallback(uint16_t conn_handle, BLECharacteristic* chr, uint8_t* d
   Serial.println(brake);
 
   if (brake) {
-//    motorR.control(MOTOR_BRAKE, 0);
-//    motorL.control(MOTOR/_BRAKE, 0);
+    //    motorR.control(MOTOR_BRAKE, 0);
+    //    motorL.control(MOTOR/_BRAKE, 0);
   } else if (speed > 0) {
-//    motorR.control(MOTOR_FORWARD, speedR);
-//    motorL.control(MOTOR_FORWARD, speedL);
+    //    motorR.control(MOTOR_FORWARD, speedR);
+    //    motorL.control(MOTOR_FORWARD, speedL);
   } else if (speed < 0) {
-//    motorR.control(MOTOR_REVERSE, -speedR);
-//    motorL.control(MOTOR_REVERSE, -speedL);
+    //    motorR.control(MOTOR_REVERSE, -speedR);
+    //    motorL.control(MOTOR_REVERSE, -speedL);
   } else {
-//    motorR.control(MOTOR_IDLE, 0);
-//    motorL.control(MOTOR_IDLE, 0);
+    //    motorR.control(MOTOR_IDLE, 0);
+    //    motorL.control(MOTOR_IDLE, 0);
   }
 }
 
@@ -173,4 +186,87 @@ char nibble2c(char c) {
   if ((c >= 'a') && (c <= 'f'))
     return c + 10 - 'a';
   return 0;
+}
+
+
+
+void device_init() {
+  Wire.begin();
+}
+
+static const int servo_addr = 0x25;
+static void cmd_servo(uint8_t servo_no, uint8_t angle, uint8_t speed) {
+  char servo_cmd[4] = { 0x01, 0x01, 0, 90 };
+  servo_cmd[0] = 0x01;
+  servo_cmd[1] = servo_no;
+  servo_cmd[2] = angle;
+  servo_cmd[3] = speed;
+  Wire.beginTransmission(servo_addr);
+  for (int i = 0; i < sizeof(servo_cmd) / sizeof(servo_cmd[0]); i++) {
+    Wire.write(servo_cmd[i]);
+  }
+  Wire.endTransmission();
+}
+
+static const int motor_addr = 0x26;
+static void cmd_motor(uint8_t motor_no, int8_t speed) {
+  uint8_t motor_cmd[3];
+  Serial.println("cmd_motor");
+
+  motor_cmd[0] = 0x01;
+  motor_cmd[1] = motor_no;
+  motor_cmd[2] = *(uint8_t *)(&speed);
+
+  Wire.beginTransmission(motor_addr);
+  for (int i = 0; i < sizeof(motor_cmd) / sizeof(motor_cmd[0]); i++) {
+    Serial.print(i);
+    Serial.print(":");
+    Serial.println(motor_cmd[i], HEX);
+    
+    Wire.write(motor_cmd[i]);
+  }
+  Wire.endTransmission();
+}
+
+
+static void i2c_scanner()
+{
+  byte error, address;
+  int nDevices;
+
+  Serial.println("Scanning...");
+
+  nDevices = 0;
+  for (address = 1; address < 127; address++ )
+  {
+    // The i2c_scanner uses the return value of
+    // the Write.endTransmisstion to see if
+    // a device did acknowledge to the address.
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+
+    if (error == 0)
+    {
+      Serial.print("I2C device found at address 0x");
+      if (address < 16)
+        Serial.print("0");
+      Serial.print(address, HEX);
+      Serial.println("  !");
+
+      nDevices++;
+    }
+    else if (error == 4)
+    {
+      Serial.print("Unknown error at address 0x");
+      if (address < 16)
+        Serial.print("0");
+      Serial.println(address, HEX);
+    }
+  }
+  if (nDevices == 0)
+    Serial.println("No I2C devices found\n");
+  else
+    Serial.println("done\n");
+
+  delay(5000);           // wait 5 seconds for next scan
 }
