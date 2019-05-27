@@ -65,6 +65,11 @@ void loop() {
   cmd_motor(1, 0);
   delay(2000);
 
+  cmd_servo(1, 30, 60);
+  delay(2000);
+  cmd_servo(1, 150, 120);
+  delay(2000);
+
   // printMotorFaultStatus();
   delay(500);
 }
@@ -194,19 +199,7 @@ void device_init() {
   Wire.begin();
 }
 
-static const int servo_addr = 0x25;
-static void cmd_servo(uint8_t servo_no, uint8_t angle, uint8_t speed) {
-  char servo_cmd[4] = { 0x01, 0x01, 0, 90 };
-  servo_cmd[0] = 0x01;
-  servo_cmd[1] = servo_no;
-  servo_cmd[2] = angle;
-  servo_cmd[3] = speed;
-  Wire.beginTransmission(servo_addr);
-  for (int i = 0; i < sizeof(servo_cmd) / sizeof(servo_cmd[0]); i++) {
-    Wire.write(servo_cmd[i]);
-  }
-  Wire.endTransmission();
-}
+
 
 static const int motor_addr = 0x26;
 static void cmd_motor(uint8_t motor_no, int8_t speed) {
@@ -222,12 +215,24 @@ static void cmd_motor(uint8_t motor_no, int8_t speed) {
     Serial.print(i);
     Serial.print(":");
     Serial.println(motor_cmd[i], HEX);
-    
+
     Wire.write(motor_cmd[i]);
   }
   Wire.endTransmission();
 }
 
+static void cmd_servo(uint8_t servo_no, uint8_t angle, uint8_t speed) {
+  char servo_cmd[4];
+  servo_cmd[0] = 0x02;
+  servo_cmd[1] = servo_no;
+  servo_cmd[2] = angle;
+  servo_cmd[3] = speed;
+  Wire.beginTransmission(motor_addr);
+  for (int i = 0; i < sizeof(servo_cmd) / sizeof(servo_cmd[0]); i++) {
+    Wire.write(servo_cmd[i]);
+  }
+  Wire.endTransmission();
+}
 
 static void i2c_scanner()
 {
