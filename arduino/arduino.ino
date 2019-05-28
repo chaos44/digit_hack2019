@@ -1,6 +1,7 @@
 #include <bluefruit.h>
 #include <Wire.h>
-//#include <linethings_motor.h>
+
+#define LED1 7
 
 /**
    2WD BLE R/C Car for LINE Things development board with TI DRV8830 motor driver
@@ -10,26 +11,26 @@
 #define DEVICE_NAME "4WD R/C Car DRV8830 - nRF52"
 
 // User service UUID: Change this to your generated service UUID
-#define USER_SERVICE_UUID "8342d390-3478-483c-8bea-6db308de7d04"       //置き換えること
+#define USER_SERVICE_UUID "3fd1e37b-83a3-4691-8a70-dc42cd486ef7"            //置き換えること
 
-// Accelerometer Service UUID
-#define RCCAR_SERVICE_UUID "8922e970-329d-44cb-badb-10070ef94b1d"
-// [0] Speed: int8, [1] Direction: int8 (right +, left -), [2] Brake: int8 (true, false)
-#define RCCAR_CHARACTERISTIC_UUID "b2a70845-b1d1-4420-b260-fa9551bfe361"
+#define WRITE_CHARACTERISTIC_UUID "E9062E71-9E62-4BC6-B0D3-35CDCD9B027B"    //置き換えること
+#define NOTIFY_CHARACTERISTIC_UUID "62FBD229-6EDD-4D1A-B554-5C4E1BB29169"   //置き換えること
 
 // PSDI Service UUID: Fixed value for Developer Trial
 #define PSDI_SERVICE_UUID "E625601E-9E55-4597-A598-76018A0D293D"
 #define PSDI_CHARACTERISTIC_UUID "26E2B12B-85F0-4F3F-9FDD-91D114270E6E"
 
 uint8_t userServiceUUID[16];
-uint8_t rccarServiceUUID[16];
-uint8_t rccarCharacteristicUUID[16];
+uint8_t writeCharacteristicUUID[16];
+uint8_t notifyCharacteristicUUID[16];
+
 uint8_t psdiServiceUUID[16];
 uint8_t psdiCharacteristicUUID[16];
 
 BLEService userService;
-BLEService rccarService;
-BLECharacteristic rccarCharacteristic;
+BLECharacteristic writeCharacteristic;
+BLECharacteristic notifyCharacteristic;
+
 BLEService psdiService;
 BLECharacteristic psdiCharacteristic;
 
@@ -40,93 +41,97 @@ void setup() {
   Serial.begin(115200);
   device_init();
 
-  //  Bluefruit.begin();
-  //  Bluefruit.setName(DEVICE_NAME);
+  Bluefruit.begin();
+  Bluefruit.setName(DEVICE_NAME);
 
 
-  //  setupServices();
-  //  startAdvertising();
+  setupServices();
+  startAdvertising();
   Serial.println("Ready to Connect");
 }
 
 void loop() {
   //  i2c_scanner();
 
-  cmd_motor(0, 100);
-  delay(2000);
-  cmd_motor(0, -100);
-  delay(2000);
-  cmd_motor(0, 0);
-  delay(2000);
-  cmd_motor(1, 100);
-  delay(2000);
-  cmd_motor(1, -100);
-  delay(2000);
-  cmd_motor(1, 0);
-  delay(2000);
+  //  cmd_motor(0, 100);
+  //  delay(2000);
+  //  cmd_motor(0, -100);
+  //  delay(2000);
+  //  cmd_motor(0, 0);
+  //  delay(2000);
+  //  cmd_motor(1, 100);
+  //  delay(2000);
+  //  cmd_motor(1, -100);
+  //  delay(2000);
+  //  cmd_motor(1, 0);
+  //  delay(2000);
+  //
+  //  cmd_servo(1, 30, 60);
+  //  delay(2000);
+  //  cmd_servo(1, 150, 120);
+  //  delay(2000);
 
-  cmd_servo(1, 30, 60);
-  delay(2000);
-  cmd_servo(1, 150, 120);
-  delay(2000);
-
-  // printMotorFaultStatus();
   delay(500);
 }
 
-void motorWriteCallback(uint16_t conn_handle, BLECharacteristic* chr, uint8_t* data, uint16_t len) {
-  if (len < 3) {
-    return;
-  }
 
-  int8_t speed = map((int8_t)data[0], INT8_MIN, INT8_MAX, -100, 100);
-  int8_t direction = data[1];
-  int8_t brake = data[2];
+#define BOX1_LOCK     0x00
+#define BOX2_LOCK     0x01
+#define WARNING_LIGHT 0x02
+#define TEST_LED      0xff
 
-  int8_t speedL, speedR;
+#define LOCK    1
+#define UNLOCK  0
 
-  if (direction > 0) {
-    // Right turn
-    speedL = speed;
-    speedR = speed * ((double) (INT8_MAX - direction) / (double) INT8_MAX);
-  } else {
-    // Left turn
-    speedL = speed * ((double) (INT8_MIN - direction) / (double) INT8_MIN);
-    speedR = speed;
-  }
+#define LOCKED_ANGLE      20
+#define UNLOCKED_ANGLE    90
 
-  Serial.print("S: ");
-  Serial.print(speed);
-  Serial.print(" (");
-  Serial.print(speedL);
-  Serial.print(":");
-  Serial.print(speedR);
-  Serial.print(") ");
-  Serial.print(" D: ");
-  Serial.print(direction);
-  Serial.print(" B: ");
-  Serial.println(brake);
-
-  if (brake) {
-    //    motorR.control(MOTOR_BRAKE, 0);
-    //    motorL.control(MOTOR/_BRAKE, 0);
-  } else if (speed > 0) {
-    //    motorR.control(MOTOR_FORWARD, speedR);
-    //    motorL.control(MOTOR_FORWARD, speedL);
-  } else if (speed < 0) {
-    //    motorR.control(MOTOR_REVERSE, -speedR);
-    //    motorL.control(MOTOR_REVERSE, -speedL);
-  } else {
-    //    motorR.control(MOTOR_IDLE, 0);
-    //    motorL.control(MOTOR_IDLE, 0);
+void WriteCallback(uint16_t conn_handle, BLECharacteristic* chr, uint8_t* data, uint16_t len) {
+  switch (data[0]) {
+    case BOX1_LOCK: {
+        char lock_state = (char)data[1];
+        if (lock_state == UNLOCK) {
+          cmd_servo(1, UNLOCKED_ANGLE, 90);
+        } else {
+          cmd_servo(1, LOCKED_ANGLE, 90);
+        }
+        break;
+      }
+    case BOX2_LOCK: {
+        char lock_state = (char)data[1];
+        if (lock_state == UNLOCK) {
+          cmd_servo(2, UNLOCKED_ANGLE, 90);
+        } else {
+          cmd_servo(2, LOCKED_ANGLE, 90);
+        }
+        break;
+      }
+    case WARNING_LIGHT: {
+        char duty = (char)data[1];
+        if (duty == 0) {
+          //              cmd_kaiten_lamp(0, 0);
+        } else {
+          //              cmd_kaiten_lamp(duty, 1);
+        }
+        break;
+      }
+    case TEST_LED: {
+        char led_state = (char)data[1];
+        if (led_state == 0) {
+          digitalWrite(LED1, LOW);
+        } else {
+          digitalWrite(LED1, HIGH);
+        }
+        break;
+      }
   }
 }
 
 void setupServices(void) {
   // Convert String UUID to raw UUID bytes
   strUUID2Bytes(USER_SERVICE_UUID, userServiceUUID);
-  strUUID2Bytes(RCCAR_SERVICE_UUID, rccarServiceUUID);
-  strUUID2Bytes(RCCAR_CHARACTERISTIC_UUID, rccarCharacteristicUUID);
+  strUUID2Bytes(WRITE_CHARACTERISTIC_UUID, writeCharacteristicUUID);
+  strUUID2Bytes(NOTIFY_CHARACTERISTIC_UUID, notifyCharacteristicUUID);
   strUUID2Bytes(PSDI_SERVICE_UUID, psdiServiceUUID);
   strUUID2Bytes(PSDI_CHARACTERISTIC_UUID, psdiCharacteristicUUID);
 
@@ -134,15 +139,18 @@ void setupServices(void) {
   userService = BLEService(userServiceUUID);
   userService.begin();
 
-  rccarService = BLEService(rccarServiceUUID);
-  rccarService.begin();
+  writeCharacteristic = BLECharacteristic(writeCharacteristicUUID);
+  writeCharacteristic.setProperties(CHR_PROPS_WRITE);
+  writeCharacteristic.setPermission(SECMODE_ENC_NO_MITM, SECMODE_ENC_NO_MITM);
+  writeCharacteristic.setWriteCallback(WriteCallback);
+  writeCharacteristic.setFixedLen(3);
+  writeCharacteristic.begin();
 
-  rccarCharacteristic = BLECharacteristic(rccarCharacteristicUUID);
-  rccarCharacteristic.setProperties(CHR_PROPS_WRITE);
-  rccarCharacteristic.setWriteCallback(motorWriteCallback);
-  rccarCharacteristic.setPermission(SECMODE_ENC_NO_MITM, SECMODE_ENC_NO_MITM);
-  rccarCharacteristic.setFixedLen(3);
-  rccarCharacteristic.begin();
+  notifyCharacteristic = BLECharacteristic(notifyCharacteristicUUID);
+  notifyCharacteristic.setProperties(CHR_PROPS_NOTIFY);
+  notifyCharacteristic.setPermission(SECMODE_ENC_NO_MITM, SECMODE_NO_ACCESS);
+  notifyCharacteristic.setFixedLen(1);
+  notifyCharacteristic.begin();
 
   // Setup PSDI Service
   psdiService = BLEService(psdiServiceUUID);
@@ -197,6 +205,8 @@ char nibble2c(char c) {
 
 void device_init() {
   Wire.begin();
+
+  pinMode(LED1, OUTPUT);
 }
 
 
