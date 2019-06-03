@@ -14,15 +14,18 @@
 */
 
 #include <bluefruit.h>
-#include <Bluefruit_FileIO.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <SparkFun_MMA8452Q.h>
 #include <linethings_temp.h>
 
-// Debug On / Off
-//#define USER_DEBUG
+#include "uuid_config.h"
+#include "debug_print.h"
+#include "motor_control.h"
+#include "buzzer.h"
+#include "raspi_com.h"
+
 // BLE Default Advertising UUID
 #define DEFAULT_ADVERTISE_UUID "f2b742dc-35e3-4e55-9def-0ce4a209c552"
 // BLE Service UUID
@@ -55,13 +58,9 @@
 #define GPIO14 14
 #define GPIO15 15
 #define GPIO16 16
-#define BUZZER_PIN 27
 
-/*********************************************************************************
-  Internal config file
-*********************************************************************************/
-#define UUID_FILENAME "/uuidconfig.txt"
-File file(InternalFS);
+
+
 
 /*********************************************************************************
   I2C Peripherals
@@ -73,36 +72,6 @@ MMA8452Q accel(0x1C);
 // Temperature sensor (AT30TS74)
 ThingsTemp temp = ThingsTemp();
 
-/*********************************************************************************
-  Buzzer
-*********************************************************************************/
-SoftwareTimer buzzer;
-
-// Callback for buzzer control @1khz
-void buzzerEvent(TimerHandle_t xTimerID) {
-  digitalWrite(BUZZER_PIN, !digitalRead(BUZZER_PIN));
-}
-
-void buzzerStart() {
-  pinMode(BUZZER_PIN, OUTPUT);
-  buzzer.begin(1, buzzerEvent);
-  buzzer.start();
-}
-
-void buzzerStop() {
-  buzzer.stop();
-  digitalWrite(BUZZER_PIN, 0);
-}
-
-/*********************************************************************************
-  Debug print
-*********************************************************************************/
-void debugPrint(String text) {
-#ifdef USER_DEBUG
-  text = "[DBG]" + text;
-  Serial.println(text);
-#endif
-}
 
 /*********************************************************************************
   BLE settings
@@ -660,48 +629,6 @@ void sw2ChangedEvent() {
 }
 
 /*********************************************************************************
-  UUID Configure data
-*********************************************************************************/
-void configFileWrite(uint8_t binUuid[]) {
-  int i = 0;
-  if (file.open(UUID_FILENAME, FILE_WRITE)) {
-    file.seek(0);
-
-    for (i = 0; i < 16; i++) {
-      file.write(binUuid[i]);
-    }
-    file.close();
-  } else {
-    debugPrint("[UUID]Write UUID : Failed!");
-  }
-}
-
-void configFileRead() {
-  file.open(UUID_FILENAME, FILE_READ);
-  file.read(blesv_user_uuid, sizeof(blesv_user_uuid));
-  file.close();
-}
-
-int configFileExist() {
-  file.open(UUID_FILENAME, FILE_READ);
-  if (!file) {
-    file.close();
-    return -1;
-  }
-  file.close();
-  return 0;
-}
-
-int compareUuid(uint8_t uuid1[], uint8_t uuid2[]) {
-  for (int i = 0; i < 16; i++) {
-    if (uuid1[i] != uuid2[i]) {
-      return -1;
-    }
-  }
-  return 0;
-}
-
-/*********************************************************************************
   Control - On board devices
 *********************************************************************************/
 void displayClear() {
@@ -874,7 +801,7 @@ void setup() {
   analogReference(AR_VDD4);  // ADC reference = VDD
   analogReadResolution(10);  // ADC 10bit
   // Load advertising UUID config
-  InternalFS.begin();
+  configFileInit();
   // If SW1 is 1 when reset, or don't find config file in flash
   // Set initial service uuid in Flash memory.
   if (!digitalRead(SW1) || configFileExist() == -1) {
@@ -892,7 +819,7 @@ void setup() {
     delay(5000);
   }
   // Read UUID config data
-  configFileRead();
+  configFileRead(blesv_user_uuid);
   // if UUID is default, TX power set to low
   uint8_t uuid128[16];
   strUUID2Bytes(DEFAULT_ADVERTISE_UUID, uuid128);
@@ -1122,59 +1049,7 @@ void command_characteristic_handler() {
 
 
 
-#define CHARBUFFERSIZE 100
-char Buffer[100];
 
-boolean readSerial() {
-  static byte index = 0;                // Buffer array index counter
-  
-  while (Serial.available() > 0) {     // Does serial1 have characters available?
-    char rc = Serial.read();           // Read a character
-    
-    if (rc == '\n') {                   // Is it newline?
-      Buffer[index] = 0;           // Yes, so terminate char array with 0
-      index = 0;                        // Reset array index
-      return true;                      // Return true (we have a full line)
-    }
-    if (true) {  
-    // if (rc >= '0') {                    // Is value between 32 and 127?
-      Buffer[index++] = rc;        // Yes, so store it and increment index
-      if (index > CHARBUFFERSIZE) {     // Have we filled the buffer?
-        index--;                        // Yes, so decrement index
-      }
-    }
-  }
-  return false;                         // Return false (we don't have a full line)
-}
-
-int strToInt(char *str)
-{
-    char c;
-    int result = 0;
-    int sign = 1;   // default to no minus. 
-    // Check for minus
-    if (str[0] == '-') 
-    {
-      str++;   // Skip over the minus.
-      sign = -1;  // It's a negative number. 
-    }
- 
-    while((c = *str))   // Stop the loop if we are at the end of the string.
-    {
-       // See if it's valid digit
-       if (c >= '0' && c <= '9') 
-       {
-          result *= 10;
-          result += c - '0';
-       }
-       else // Not a valid digit
-       {
-           break; // Stop looking for more digits. 
-       }
-       str++;  // Go to next digit. 
-    }
-    return result * sign;
-}
 
 void loop() {
   int motor;
@@ -1284,7 +1159,7 @@ void update_advertiseuuid() {
     return;
   }
   configFileWrite(blesv_user_uuid);
-  configFileRead();
+  configFileRead(blesv_user_uuid);
   debugPrint("BLE advertising uuid changed from LIFF.");
   debugPrint("Enable new uuid after restart MPU.");
   debugPrint("Please push reset button.");
@@ -1383,83 +1258,3 @@ void notify_board_state(float acc_x, float acc_y, float acc_z, float temperature
 
 
 
-
-void device_init() {
-  Wire.begin();
-}
- 
-
-static const int motor_addr = 0x26;
-static void cmd_motor(uint8_t motor_no, int8_t speed) {
-  uint8_t motor_cmd[3];
-  Serial.println("cmd_motor");
-
-  motor_cmd[0] = 0x01;
-  motor_cmd[1] = motor_no;
-  motor_cmd[2] = *(uint8_t *)(&speed);
-
-  Wire.beginTransmission(motor_addr);
-  for (int i = 0; i < sizeof(motor_cmd) / sizeof(motor_cmd[0]); i++) {
-    Serial.print(i);
-    Serial.print(":");
-    Serial.println(motor_cmd[i], HEX);
-
-    Wire.write(motor_cmd[i]);
-  }
-  Wire.endTransmission();
-}
-
-static void cmd_servo(uint8_t servo_no, uint8_t angle, uint8_t speed) {
-  char servo_cmd[4];
-  servo_cmd[0] = 0x02;
-  servo_cmd[1] = servo_no;
-  servo_cmd[2] = angle;
-  servo_cmd[3] = speed;
-  Wire.beginTransmission(motor_addr);
-  for (int i = 0; i < sizeof(servo_cmd) / sizeof(servo_cmd[0]); i++) {
-    Wire.write(servo_cmd[i]);
-  }
-  Wire.endTransmission();
-}
-
-static void i2c_scanner()
-{
-  byte error, address;
-  int nDevices;
-
-  Serial.println("Scanning...");
-
-  nDevices = 0;
-  for (address = 1; address < 127; address++ )
-  {
-    // The i2c_scanner uses the return value of
-    // the Write.endTransmisstion to see if
-    // a device did acknowledge to the address.
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
-
-    if (error == 0)
-    {
-      Serial.print("I2C device found at address 0x");
-      if (address < 16)
-        Serial.print("0");
-      Serial.print(address, HEX);
-      Serial.println("  !");
-
-      nDevices++;
-    }
-    else if (error == 4)
-    {
-      Serial.print("Unknown error at address 0x");
-      if (address < 16)
-        Serial.print("0");
-      Serial.println(address, HEX);
-    }
-  }
-  if (nDevices == 0)
-    Serial.println("No I2C devices found\n");
-  else
-    Serial.println("done\n");
-
-  delay(5000);           // wait 5 seconds for next scan
-}
