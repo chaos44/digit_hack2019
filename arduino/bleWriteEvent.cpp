@@ -50,7 +50,10 @@ volatile int g_flag_error_advertiseuuid = 0;
       CMD1(1:1Byte), don't care(0,2Byte), hash of payload(x:1Byte),
       UUID(x:16Byte) UUID shoud be send binary.
 */
-void bleWriteEvent(uint16_t conn_handle, BLECharacteristic* chr, uint8_t* data, uint16_t len) {
+
+static void board_user_write();
+
+void writeEvent(uint8_t* data){
   byte cmd = data[0];
   byte index = data[1];
   byte length = data[2];
@@ -123,6 +126,7 @@ void bleWriteEvent(uint16_t conn_handle, BLECharacteristic* chr, uint8_t* data, 
   }
 }
 
+
 void ble_write_loop(){
 // Set LED and buzzer value
   if (g_flag_user_write) {
@@ -131,7 +135,7 @@ void ble_write_loop(){
   }
 }
   
-void board_user_write() {
+static void board_user_write() {
   // Set GPIO output mode
   pinMode(GPIO2, OUTPUT);
   pinMode(GPIO3, OUTPUT);
