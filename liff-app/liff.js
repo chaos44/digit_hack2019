@@ -1,12 +1,12 @@
 // User service UUID: Change this to your generated service UUID
-const USER_SERVICE_UUID         = '3fd1e37b-83a3-4691-8a70-dc42cd486ef7'; // LED, Button
+const USER_SERVICE_UUID = '3fd1e37b-83a3-4691-8a70-dc42cd486ef7'; // LED, Button
 // User service characteristics
-const LED_CHARACTERISTIC_UUID   = 'E9062E71-9E62-4BC6-B0D3-35CDCD9B027B';
-const BTN_CHARACTERISTIC_UUID   = '62FBD229-6EDD-4D1A-B554-5C4E1BB29169';
+const LED_CHARACTERISTIC_UUID = 'E9062E71-9E62-4BC6-B0D3-35CDCD9B027B';
+const BTN_CHARACTERISTIC_UUID = '62FBD229-6EDD-4D1A-B554-5C4E1BB29169';
 
 // PSDI Service UUID: Fixed value for Developer Trial
-const PSDI_SERVICE_UUID         = 'E625601E-9E55-4597-A598-76018A0D293D'; // Device ID
-const PSDI_CHARACTERISTIC_UUID  = '26E2B12B-85F0-4F3F-9FDD-91D114270E6E';
+const PSDI_SERVICE_UUID = 'E625601E-9E55-4597-A598-76018A0D293D'; // Device ID
+const PSDI_CHARACTERISTIC_UUID = '26E2B12B-85F0-4F3F-9FDD-91D114270E6E';
 
 // UI settings
 let ledState = false; // true: LED on, false: LED off
@@ -16,9 +16,10 @@ let clickCount = 0;
 // On window load //
 // -------------- //
 
-window.onload = () => {
+window.addEventListener('load', function () {
+    eruda.init();
     initializeApp();
-};
+}, true)
 
 // ----------------- //
 // Handler functions //
@@ -40,9 +41,9 @@ function uiToggleLedButton(state) {
     el.innerText = state ? "Switch LED OFF" : "Switch LED ON";
 
     if (state) {
-      el.classList.add("led-on");
+        el.classList.add("led-on");
     } else {
-      el.classList.remove("led-on");
+        el.classList.remove("led-on");
     }
 }
 
@@ -269,3 +270,44 @@ function liffToggleDeviceLedState(state) {
         uiStatusError(makeErrorMsg(error), false);
     });
 }
+
+
+
+window.addEventListener('load', function () {
+    var elem = document.getElementById('left_motor');
+    var target = document.getElementById('left_value');
+    var rangeValue = function (elem, target) {
+        return function (evt) {
+            target.innerHTML = elem.value;
+
+            var cmd = new Uint8Array([0x01, 0x00, elem.value]);
+            console.log(cmd);
+            window.ledCharacteristic.writeValue(
+                cmd
+            ).catch(error => {
+                uiStatusError(makeErrorMsg(error), false);
+            });
+        }
+    }
+    elem.addEventListener('input', rangeValue(elem, target));
+})
+
+
+window.addEventListener('load', function () {
+    var elem = document.getElementById('right_motor');
+    var target = document.getElementById('right_value');
+    var rangeValue = function (elem, target) {
+        return function (evt) {
+            target.innerHTML = elem.value;
+            
+            var cmd = new Uint8Array([0x01, 0x01, elem.value]);
+            console.log(cmd);
+            window.ledCharacteristic.writeValue(
+                cmd
+            ).catch(error => {
+                uiStatusError(makeErrorMsg(error), false);
+            });
+        }
+    }
+    elem.addEventListener('input', rangeValue(elem, target));
+})
