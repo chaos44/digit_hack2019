@@ -3,7 +3,7 @@
 
 static const int motor_addr = 0x26;
 
-void device_init() {
+void motor_init() {
   Wire.begin();
 }
  
@@ -28,12 +28,18 @@ void cmd_motor(uint8_t motor_no, int8_t speed) {
 
 void cmd_servo(uint8_t servo_no, uint8_t angle, uint8_t speed) {
   char servo_cmd[4];
+  Serial.println("cmd_servo");
+
   servo_cmd[0] = 0x02;
   servo_cmd[1] = servo_no;
   servo_cmd[2] = angle;
   servo_cmd[3] = speed;
   Wire.beginTransmission(motor_addr);
   for (int i = 0; i < sizeof(servo_cmd) / sizeof(servo_cmd[0]); i++) {
+    Serial.print(i);
+    Serial.print(":");
+    Serial.println(servo_cmd[i], HEX);
+
     Wire.write(servo_cmd[i]);
   }
   Wire.endTransmission();
