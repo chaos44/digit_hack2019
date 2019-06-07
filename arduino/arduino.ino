@@ -17,6 +17,22 @@
 #define BUTTON 29
 #define LED1 7
 
+uint8_t write_cmd[100];
+
+typedef enum
+{
+  LED_WRITE = 0,
+  MOTOR_WRITE = 1,
+  SERVO_WRITE = 2,
+  MOTOR_CONTROL_MODE = 3,
+} write_type_t;
+
+typedef enum
+{
+  MOTOR_CONTROL_AUTO = 0,
+  MOTOR_CONTROL_MANUAL = 1,
+} motor_control_mode_t;
+
 uint8_t userServiceUUID[16];
 uint8_t psdiServiceUUID[16];
 uint8_t psdiCharacteristicUUID[16];
@@ -44,6 +60,8 @@ void setup()
   setupServices();
   startAdvertising();
 
+  Serial.begin(115200);
+  Serial.println("Start");
   motor_init();
 }
 
@@ -57,6 +75,87 @@ void loop()
     btnAction = 0;
     notifyCharacteristic.notify(&btnRead, sizeof(btnRead));
     delay(20);
+  }
+
+
+  uint8_t len = write_cmd[0];
+  if (len > 0)
+  {
+    static motor_control_mode_t motor_control_mode = MOTOR_CONTROL_AUTO;
+    uint8_t *data = &write_cmd[1];
+    write_type_t type = (write_type_t)data[0];
+
+    for (int i = 0; i < len; i++)
+    {
+      Serial.print(data[i], HEX);
+      Serial.print(":");
+    }
+    Serial.println("");
+
+    switch (type)
+    {
+    case LED_WRITE:
+    {
+      uint8_t state;
+      static uint8_t state_old = 0xff;
+      if (len != 2)
+        break;
+      if (data[1] == 0)
+      {
+        state = 0;
+      }
+      else
+      {
+        state = 1;
+      }
+      if(state_old != state){
+        Serial.print("LED:");
+        Serial.println(state);
+        digitalWrite(LED1, state);
+      }
+      state_old = state;
+      break;
+    }
+    case MOTOR_WRITE:
+    {
+      if (len != 3)
+        break;
+      if (motor_control_mode == MOTOR_CONTROL_MANUAL)
+      {
+        uint8_t motor_no = data[1];
+        uint8_t speed = data[2];
+        cmd_motor(motor_no, speed);
+      }
+      break;
+    }
+    case SERVO_WRITE:
+    {
+      if (len != 4)
+        break;
+      uint8_t servo_no = data[1];
+      uint8_t angle = data[2];
+      uint8_t speed = data[3];
+      cmd_servo(servo_no, angle, speed);
+      break;
+    }
+    case MOTOR_CONTROL_MODE:
+    {
+      uint8_t state = data[0];
+      if (len != 2)
+        break;
+      if (data[1] == 0)
+      {
+        motor_control_mode = MOTOR_CONTROL_AUTO;
+        Serial.println("MOTOR_CONTROL_AUTO");
+      }
+      else
+      {
+        motor_control_mode = MOTOR_CONTROL_MANUAL;
+        Serial.println("MOTOR_CONTROL_MANUAL");
+      }
+      break;
+    }
+    }
   }
 }
 
@@ -77,7 +176,7 @@ void setupServices(void)
   writeCharacteristic.setProperties(CHR_PROPS_WRITE);
   writeCharacteristic.setWriteCallback(writeLEDCallback);
   writeCharacteristic.setPermission(SECMODE_ENC_NO_MITM, SECMODE_ENC_NO_MITM);
-  writeCharacteristic.setFixedLen(1);
+  // writeCharacteristic.setFixedLen(1);
   writeCharacteristic.begin();
 
   notifyCharacteristic = BLECharacteristic(notifyCharacteristicUUID);
@@ -117,79 +216,13 @@ void buttonAction()
   btnAction++;
 }
 
-typedef enum
-{
-  LED_WRITE = 0,
-  MOTOR_WRITE = 1,
-  SERVO_WRITE = 2,
-  MOTOR_CONTROL_MODE = 3,
-} write_type_t;
-
-typedef enum
-{
-  MOTOR_CONTROL_AUTO = 0,
-  MOTOR_CONTROL_MANUAL = 1,
-} motor_control_mode_t;
-
 void writeLEDCallback(uint16_t conn_hdl, BLECharacteristic *chr, uint8_t *data, uint16_t len)
 {
-  static motor_control_mode_t motor_control_mode = MOTOR_CONTROL_AUTO;
-  write_type_t type = (write_type_t)data[0];
-  int value = *data;
-
-  switch (type)
+  for (int i = 0; i < len; i++)
   {
-  case LED_WRITE:
-  {
-    uint8_t state;
-    if (data[1] == 0)
-    {
-      state = 0;
-      Serial.print("LED:OFF");
-    }
-    else
-    {
-      state = 1;
-      Serial.print("LED:ON");
-    }
-    digitalWrite(LED1, state);
-
-    break;
+    write_cmd[i + 1] = data[i];
   }
-  case MOTOR_WRITE:
-  {
-    if (motor_control_mode == MOTOR_CONTROL_MANUAL)
-    {
-      uint8_t motor_no = data[1];
-      uint8_t speed = data[2];
-      cmd_motor(motor_no, speed);
-    }
-    break;
-  }
-  case SERVO_WRITE:
-  {
-    uint8_t servo_no = data[1];
-    uint8_t angle = data[2];
-    uint8_t speed = data[3];
-    cmd_servo(servo_no, angle, speed);
-    break;
-  }
-  case MOTOR_CONTROL_MODE:
-  {
-    uint8_t state = data[0];
-    if (data[1] == 0)
-    {
-      motor_control_mode = MOTOR_CONTROL_AUTO;
-      Serial.print("MOTOR_CONTROL_AUTO");
-    }
-    else
-    {
-      motor_control_mode = MOTOR_CONTROL_MANUAL;
-      Serial.print("MOTOR_CONTROL_MANUAL");
-    }
-    break;
-  }
-  }
+  write_cmd[0] = len;
 }
 
 // UUID Converter
