@@ -84,12 +84,12 @@ void loop()
     uint8_t *data = &write_cmd[1];
     write_type_t type = (write_type_t)data[0];
 
-    for (int i = 0; i < len; i++)
-    {
-      Serial.print(data[i], HEX);
-      Serial.print(":");
-    }
-    Serial.println("");
+    // for (int i = 0; i < len; i++)
+    // {
+    //   Serial.print(data[i], HEX);
+    //   Serial.print(":");
+    // }
+    // Serial.println("");
 
     switch (type)
     {
@@ -128,7 +128,7 @@ void loop()
         uint8_t motor_no = data[1];
         uint8_t speed = data[2];
 
-        if ((motor_no != motor_no_old) || (speed_old != speed_old))
+        if ((motor_no != motor_no_old) || (speed != speed_old))
         {
           cmd_motor(motor_no, speed);
         }
