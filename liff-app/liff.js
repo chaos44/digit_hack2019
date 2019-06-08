@@ -262,9 +262,10 @@ function liffGetButtonStateCharacteristic(characteristic) {
 }
 
 function liffToggleDeviceLedState(state) {
-    // on: 0x01
-    // off: 0x00
     window.ledCharacteristic.writeValue(
+
+        //0 byte目：LED制御コマンド:[0]
+        //1 byte目：LED点灯状態[0:OFF, 1:ON]
         state ? new Uint8Array([0x00, 0x01]) : new Uint8Array([0x00, 0x00])
     ).catch(error => {
         uiStatusError(makeErrorMsg(error), false);
@@ -280,6 +281,9 @@ window.addEventListener('load', function () {
 
             target.innerHTML = elem.value;
 
+            //0 byte目：モータ制御コマンド [1]
+            //1 byte目：モータNo [0, 1]
+            //2 byte目：モータ回転速度 [-100～100]
             var cmd = new Uint8Array([0x01, 0x00, elem.value]);
             console.log(cmd);
 
@@ -304,6 +308,9 @@ window.addEventListener('load', function () {
         return function (evt) {
             target.innerHTML = elem.value;
 
+            //0 byte目：モータ制御コマンド [1]
+            //1 byte目：モータNo [0, 1]
+            //2 byte目：モータ回転速度 [-100～100]
             var cmd = new Uint8Array([0x01, 0x01, elem.value]);
             console.log(cmd);
 
@@ -326,11 +333,17 @@ window.addEventListener('load', function () {
     checkbox.addEventListener('change', function () {
         if (this.checked) {
             // Checkbox is checked..
+
+            //0 byte目：モータ制御モード変更コマンド:[3]
+            //1 byte目：モータ制御モード[0:自動, 1:手動]
             var cmd = new Uint8Array([0x03, 0x01]);
             console.log(cmd);
 
         } else {
             // Checkbox is not checked..
+
+            //0 byte目：モータ制御モード変更コマンド:[3]
+            //1 byte目：モータ制御モード[0:自動, 1:手動]
             var cmd = new Uint8Array([0x03, 0x00]);
             console.log(cmd);
         }
@@ -351,6 +364,10 @@ window.addEventListener('load', function () {
         return function (evt) {
             target.innerHTML = elem.value;
 
+            //0 byte目：サーボ制御コマンド [2]
+            //1 byte目：サーボNo [0～2]
+            //2 byte目：サーボ角度 [0度～180度]
+            //3 byte目：サーボ回転速度 [0～100]
             var cmd = new Uint8Array([0x02, 0x00, elem.value, 30]);
             console.log(cmd);
 
@@ -374,6 +391,10 @@ window.addEventListener('load', function () {
         return function (evt) {
             target.innerHTML = elem.value;
 
+            //0 byte目：サーボ制御コマンド [2]
+            //1 byte目：サーボNo [0～2]
+            //2 byte目：サーボ角度 [0度～180度]
+            //3 byte目：サーボ回転速度 [0～100]
             var cmd = new Uint8Array([0x02, 0x01, elem.value, 30]);
             console.log(cmd);
 
@@ -397,6 +418,10 @@ window.addEventListener('load', function () {
         return function (evt) {
             target.innerHTML = elem.value;
 
+            //0 byte目：サーボ制御コマンド [2]
+            //1 byte目：サーボNo [0～2]
+            //2 byte目：サーボ角度 [0度～180度]
+            //3 byte目：サーボ回転速度 [0～100]
             var cmd = new Uint8Array([0x02, 0x02, elem.value, 30]);
             console.log(cmd);
 
@@ -418,7 +443,7 @@ var throttle = (function (callback, interval = 256) {
     var time = Date.now(),
         lag,
         debounceTimer,
-        debounceDelay = 16*2;
+        debounceDelay = 16 * 2;
 
     return function (callback) {
         lag = time + interval - Date.now();

@@ -3,8 +3,8 @@
 
 #include <bluefruit.h>
 
-void ExecCmd();
+void ExecUartCmd();
 
-void ExecCmdCallback(uint8_t motor, int speed);
+void ExecUartCmdCallback(uint8_t motor, int speed);
 
 #endif

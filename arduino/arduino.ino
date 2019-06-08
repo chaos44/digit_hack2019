@@ -18,8 +18,6 @@
 #define BUTTON 29
 #define LED1 7
 
-uint8_t write_cmd[100];
-
 typedef enum
 {
   LED_WRITE = 0,
@@ -34,19 +32,23 @@ typedef enum
   MOTOR_CONTROL_MANUAL = 1,
 } motor_control_mode_t;
 
-uint8_t userServiceUUID[16];
-uint8_t psdiServiceUUID[16];
-uint8_t psdiCharacteristicUUID[16];
-uint8_t writeCharacteristicUUID[16];
-uint8_t notifyCharacteristicUUID[16];
+static uint8_t userServiceUUID[16];
+static uint8_t psdiServiceUUID[16];
+static uint8_t psdiCharacteristicUUID[16];
+static uint8_t writeCharacteristicUUID[16];
+static uint8_t notifyCharacteristicUUID[16];
 
-BLEService userService;
-BLEService psdiService;
-BLECharacteristic psdiCharacteristic;
-BLECharacteristic notifyCharacteristic;
-BLECharacteristic writeCharacteristic;
+static BLEService userService;
+static BLEService psdiService;
+static BLECharacteristic psdiCharacteristic;
+static BLECharacteristic notifyCharacteristic;
+static BLECharacteristic writeCharacteristic;
 
-volatile int btnAction = 0;
+static volatile int btnAction = 0;
+
+static uint8_t write_cmd[100];
+static motor_control_mode_t motor_control_mode = MOTOR_CONTROL_AUTO;
+static void ExecLineThingdCmd(uint8_t *write_cmd);
 
 void setup()
 {
@@ -66,28 +68,10 @@ void setup()
   motor_init();
 }
 
-static motor_control_mode_t motor_control_mode = MOTOR_CONTROL_AUTO;
-
-void ExecCmdCallback(uint8_t motor, int speed)
-{
-  uint8_t _speed;
-  if (motor_control_mode == MOTOR_CONTROL_AUTO)
-  {
-    // Serial.print("motor: ");
-    // Serial.print(motor);
-    // Serial.print("\tspeed: ");
-    // Serial.println(speed);
-    _speed = (uint8_t)speed;
-    cmd_motor(motor, _speed);
-  }
-}
-
 void loop()
 {
 
-  ExecCmd();
   uint8_t btnRead;
-
   while (btnAction > 0)
   {
     btnRead = !digitalRead(BUTTON);
@@ -96,10 +80,30 @@ void loop()
     delay(20);
   }
 
+  ExecUartCmd();
+  ExecLineThingdCmd(write_cmd);
+}
+
+void ExecUartCmdCallback(uint8_t motor, int speed)
+{
+  if (motor_control_mode == MOTOR_CONTROL_AUTO)
+  {
+    // Serial.print("motor: ");
+    // Serial.print(motor);
+    // Serial.print("\tspeed: ");
+    // Serial.println(speed);
+
+    uint8_t _speed;
+    _speed = (uint8_t)speed;
+    cmd_motor(motor, _speed);
+  }
+}
+
+static void ExecLineThingdCmd(uint8_t *write_cmd)
+{
   uint8_t len = write_cmd[0];
   if (len > 0)
   {
-
     uint8_t *data = &write_cmd[1];
     write_type_t type = (write_type_t)data[0];
 

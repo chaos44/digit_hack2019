@@ -34,7 +34,7 @@ static boolean readSerial()
   return false; // Return false (we don't have a full line)
 }
 
-void ExecCmd()
+void ExecUartCmd()
 {
   int motor;
   boolean ret = readSerial();
@@ -46,7 +46,7 @@ void ExecCmd()
       if (Buffer[2] == ':')
       {
         int speed = strToInt(&Buffer[3]);
-        ExecCmdCallback(motor, speed);
+        ExecUartCmdCallback(motor, speed);
       }
     }
   }
