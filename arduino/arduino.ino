@@ -1,5 +1,6 @@
 #include <bluefruit.h>
 #include "motor_control.h"
+#include "raspi_com.h"
 
 // Device Name: Maximum 30 bytes
 #define DEVICE_NAME "LINE Things Trial dev board"
@@ -65,8 +66,26 @@ void setup()
   motor_init();
 }
 
+static motor_control_mode_t motor_control_mode = MOTOR_CONTROL_AUTO;
+
+void ExecCmdCallback(uint8_t motor, int speed)
+{
+  uint8_t _speed;
+  if (motor_control_mode == MOTOR_CONTROL_AUTO)
+  {
+    // Serial.print("motor: ");
+    // Serial.print(motor);
+    // Serial.print("\tspeed: ");
+    // Serial.println(speed);
+    _speed = (uint8_t)speed;
+    cmd_motor(motor, _speed);
+  }
+}
+
 void loop()
 {
+
+  ExecCmd();
   uint8_t btnRead;
 
   while (btnAction > 0)
@@ -80,7 +99,7 @@ void loop()
   uint8_t len = write_cmd[0];
   if (len > 0)
   {
-    static motor_control_mode_t motor_control_mode = MOTOR_CONTROL_AUTO;
+
     uint8_t *data = &write_cmd[1];
     write_type_t type = (write_type_t)data[0];
 

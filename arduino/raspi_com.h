@@ -3,9 +3,8 @@
 
 #include <bluefruit.h>
 
-extern char Buffer[100];
+void ExecCmd();
 
-boolean readSerial();
-int strToInt(char *str);
+void ExecCmdCallback(uint8_t motor, int speed);
 
 #endif
