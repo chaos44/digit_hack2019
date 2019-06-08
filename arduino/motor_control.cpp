@@ -9,7 +9,7 @@ void motor_init() {
  
 void cmd_motor(uint8_t motor_no, int8_t speed) {
   uint8_t motor_cmd[3];
-  Serial.println("cmd_motor");
+  Serial.print("cmd_motor:\t");
 
   motor_cmd[0] = 0x01;
   motor_cmd[1] = motor_no;
@@ -28,7 +28,7 @@ void cmd_motor(uint8_t motor_no, int8_t speed) {
 
 void cmd_servo(uint8_t servo_no, uint8_t angle, uint8_t speed) {
   char servo_cmd[4];
-  Serial.println("cmd_servo");
+  Serial.print("cmd_servo:\t");
 
   servo_cmd[0] = 0x02;
   servo_cmd[1] = servo_no;

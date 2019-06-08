@@ -271,8 +271,7 @@ function liffToggleDeviceLedState(state) {
     });
 }
 
-
-
+// 左モータ
 window.addEventListener('load', function () {
     var elem = document.getElementById('left_motor');
     var target = document.getElementById('left_value');
@@ -297,6 +296,7 @@ window.addEventListener('load', function () {
 })
 
 
+// 右モータ
 window.addEventListener('load', function () {
     var elem = document.getElementById('right_motor');
     var target = document.getElementById('right_value');
@@ -319,6 +319,7 @@ window.addEventListener('load', function () {
     });
 })
 
+// モータ制御 手動/自動
 window.addEventListener('load', function () {
     var checkbox = document.querySelector("input[name=manual]");
 
@@ -342,12 +343,82 @@ window.addEventListener('load', function () {
 })
 
 
+// サーボ0
+window.addEventListener('load', function () {
+    var elem = document.getElementById('servo0');
+    var target = document.getElementById('servo0_angle');
+    var rangeValue = function (elem, target) {
+        return function (evt) {
+            target.innerHTML = elem.value;
 
+            var cmd = new Uint8Array([0x02, 0x00, elem.value, 30]);
+            console.log(cmd);
+
+            window.ledCharacteristic.writeValue(
+                cmd
+            ).catch(error => {
+                uiStatusError(makeErrorMsg(error), false);
+            });
+        }
+    }
+    elem.addEventListener('input', function () {
+        throttle(rangeValue(elem, target), 500)
+    });
+})
+
+// サーボ1
+window.addEventListener('load', function () {
+    var elem = document.getElementById('servo1');
+    var target = document.getElementById('servo1_angle');
+    var rangeValue = function (elem, target) {
+        return function (evt) {
+            target.innerHTML = elem.value;
+
+            var cmd = new Uint8Array([0x02, 0x01, elem.value, 30]);
+            console.log(cmd);
+
+            window.ledCharacteristic.writeValue(
+                cmd
+            ).catch(error => {
+                uiStatusError(makeErrorMsg(error), false);
+            });
+        }
+    }
+    elem.addEventListener('input', function () {
+        throttle(rangeValue(elem, target), 500)
+    });
+})
+
+// サーボ2
+window.addEventListener('load', function () {
+    var elem = document.getElementById('servo2');
+    var target = document.getElementById('servo2_angle');
+    var rangeValue = function (elem, target) {
+        return function (evt) {
+            target.innerHTML = elem.value;
+
+            var cmd = new Uint8Array([0x02, 0x02, elem.value, 30]);
+            console.log(cmd);
+
+            window.ledCharacteristic.writeValue(
+                cmd
+            ).catch(error => {
+                uiStatusError(makeErrorMsg(error), false);
+            });
+        }
+    }
+    elem.addEventListener('input', function () {
+        throttle(rangeValue(elem, target), 500)
+    });
+})
+
+
+// イベントを間引く
 var throttle = (function (callback, interval = 256) {
     var time = Date.now(),
         lag,
         debounceTimer,
-        debounceDelay = 16 * 10;
+        debounceDelay = 16*2;
 
     return function (callback) {
         lag = time + interval - Date.now();

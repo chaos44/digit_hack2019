@@ -57,16 +57,40 @@
       <input type="checkbox" name="manual">手動モード
     </p>
     <p>
-      <span>左モータ</span>
-      <input type="range" id="left_motor" min="-100" max="100" step="1" value="0">
+      <span>左</span>
+      <input type="range" id="left_motor" min="-100" max="100" step="1" value="0" style="width:200px">
       <span id="left_value">0</span>
     </p>
     <p>
-      <span>右モータ</span>
-      <input type="range" id="right_motor" min="-100" max="100" step="1" value="0">
+      <span>右</span>
+      <input type="range" id="right_motor" min="-100" max="100" step="1" value="0" style="width:200px">
       <span id="right_value">0</span>
     </p>
   </div>
+
+
+  <div>
+    サーボ制御
+    <p>
+      <span>0</span>
+      <input type="range" id="servo0" min="0" max="180" step="1" value="90" style="width:200px">
+      <span id="servo0_angle">90</span>
+    </p>
+    <p>
+      <span>1</span>
+      <input type="range" id="servo1" min="0" max="180" step="1" value="90" style="width:200px">
+      <span id="servo1_angle">90</span>
+    </p>
+    <p>
+      <span>2</span>
+      <input type="range" id="servo2" min="0" max="180" step="1" value="90" style="width:200px">
+      <span id="servo2_angle">90</span>
+    </p>
+
+  </div>
+
+
+
 </body>
 
 </html>

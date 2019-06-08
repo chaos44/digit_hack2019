@@ -138,7 +138,17 @@ void loop()
       uint8_t servo_no = data[1];
       uint8_t angle = data[2];
       uint8_t speed = data[3];
-      cmd_servo(servo_no, angle, speed);
+      static uint8_t servo_no_old = 0xff;
+      static uint8_t angle_old = 0xff;
+      static uint8_t speed_old = 0xff;
+
+      if ((servo_no_old != servo_no) || (angle_old != angle) || (speed_old != speed))
+      {
+        cmd_servo(servo_no, angle, speed);
+      }
+      servo_no_old = servo_no;
+      angle_old = angle;
+      speed_old = speed;
       break;
     }
     case MOTOR_CONTROL_MODE:
