@@ -77,7 +77,6 @@ void loop()
     delay(20);
   }
 
-
   uint8_t len = write_cmd[0];
   if (len > 0)
   {
@@ -108,7 +107,8 @@ void loop()
       {
         state = 1;
       }
-      if(state_old != state){
+      if (state_old != state)
+      {
         Serial.print("LED:");
         Serial.println(state);
         digitalWrite(LED1, state);
@@ -120,11 +120,20 @@ void loop()
     {
       if (len != 3)
         break;
-      if (motor_control_mode == MOTOR_CONTROL_MANUAL)
+      //if (motor_control_mode == MOTOR_CONTROL_MANUAL)
+      if (1)
       {
+        static uint8_t motor_no_old = 0xff;
+        static uint8_t speed_old = 0xff;
         uint8_t motor_no = data[1];
         uint8_t speed = data[2];
-        cmd_motor(motor_no, speed);
+
+        if ((motor_no != motor_no_old) || (speed_old != speed_old))
+        {
+          cmd_motor(motor_no, speed);
+        }
+        motor_no_old = motor_no;
+        speed_old = speed;
       }
       break;
     }

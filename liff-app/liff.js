@@ -278,10 +278,12 @@ window.addEventListener('load', function () {
     var target = document.getElementById('left_value');
     var rangeValue = function (elem, target) {
         return function (evt) {
+
             target.innerHTML = elem.value;
 
             var cmd = new Uint8Array([0x01, 0x00, elem.value]);
             console.log(cmd);
+
             window.ledCharacteristic.writeValue(
                 cmd
             ).catch(error => {
@@ -289,7 +291,9 @@ window.addEventListener('load', function () {
             });
         }
     }
-    elem.addEventListener('input', rangeValue(elem, target));
+    elem.addEventListener('input', function () {
+        throttle(rangeValue(elem, target), 500)
+    });
 })
 
 
@@ -299,9 +303,10 @@ window.addEventListener('load', function () {
     var rangeValue = function (elem, target) {
         return function (evt) {
             target.innerHTML = elem.value;
-            
+
             var cmd = new Uint8Array([0x01, 0x01, elem.value]);
             console.log(cmd);
+
             window.ledCharacteristic.writeValue(
                 cmd
             ).catch(error => {
@@ -309,5 +314,32 @@ window.addEventListener('load', function () {
             });
         }
     }
-    elem.addEventListener('input', rangeValue(elem, target));
+    elem.addEventListener('input', function () {
+        throttle(rangeValue(elem, target), 500)
+    });
 })
+
+
+
+
+var throttle = (function (callback, interval = 256) {
+    var time = Date.now(),
+        lag,
+        debounceTimer,
+        debounceDelay = 16*10;
+
+    return function (callback) {
+        lag = time + interval - Date.now();
+        if (lag < 0) {
+            //console.log( time + "：throttle：" + lag);
+            callback();
+            time = Date.now();
+        } else {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                //console.log( time + "：debounce：" + (interval - lag + debounceDelay));
+                callback();
+            }, (interval - lag + debounceDelay));
+        }
+    }
+})();

@@ -17,12 +17,12 @@ void cmd_motor(uint8_t motor_no, int8_t speed) {
 
   Wire.beginTransmission(motor_addr);
   for (int i = 0; i < sizeof(motor_cmd) / sizeof(motor_cmd[0]); i++) {
-    Serial.print(i);
+    Serial.print(motor_cmd[i], HEX);
     Serial.print(":");
-    Serial.println(motor_cmd[i], HEX);
 
     Wire.write(motor_cmd[i]);
   }
+  Serial.println("");
   Wire.endTransmission();
 }
 
@@ -36,12 +36,12 @@ void cmd_servo(uint8_t servo_no, uint8_t angle, uint8_t speed) {
   servo_cmd[3] = speed;
   Wire.beginTransmission(motor_addr);
   for (int i = 0; i < sizeof(servo_cmd) / sizeof(servo_cmd[0]); i++) {
-    Serial.print(i);
+    Serial.print(servo_cmd[i], HEX);
     Serial.print(":");
-    Serial.println(servo_cmd[i], HEX);
 
     Wire.write(servo_cmd[i]);
   }
+  Serial.println("");  
   Wire.endTransmission();
 }
 
