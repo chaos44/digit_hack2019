@@ -319,6 +319,27 @@ window.addEventListener('load', function () {
     });
 })
 
+window.addEventListener('load', function () {
+    var checkbox = document.querySelector("input[name=manual]");
+
+    checkbox.addEventListener('change', function () {
+        if (this.checked) {
+            // Checkbox is checked..
+            var cmd = new Uint8Array([0x03, 0x01]);
+            console.log(cmd);
+
+        } else {
+            // Checkbox is not checked..
+            var cmd = new Uint8Array([0x03, 0x00]);
+            console.log(cmd);
+        }
+        window.ledCharacteristic.writeValue(
+            cmd
+        ).catch(error => {
+            uiStatusError(makeErrorMsg(error), false);
+        });
+    });
+})
 
 
 
@@ -326,7 +347,7 @@ var throttle = (function (callback, interval = 256) {
     var time = Date.now(),
         lag,
         debounceTimer,
-        debounceDelay = 16*10;
+        debounceDelay = 16 * 10;
 
     return function (callback) {
         lag = time + interval - Date.now();

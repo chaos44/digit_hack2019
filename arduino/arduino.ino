@@ -99,14 +99,9 @@ void loop()
       static uint8_t state_old = 0xff;
       if (len != 2)
         break;
-      if (data[1] == 0)
-      {
-        state = 0;
-      }
-      else
-      {
-        state = 1;
-      }
+
+      state = (data[1] == 0) ? 0 : 1;
+
       if (state_old != state)
       {
         Serial.print("LED:");
@@ -120,8 +115,7 @@ void loop()
     {
       if (len != 3)
         break;
-      //if (motor_control_mode == MOTOR_CONTROL_MANUAL)
-      if (1)
+      if (motor_control_mode == MOTOR_CONTROL_MANUAL)
       {
         static uint8_t motor_no_old = 0xff;
         static uint8_t speed_old = 0xff;
@@ -149,19 +143,26 @@ void loop()
     }
     case MOTOR_CONTROL_MODE:
     {
-      uint8_t state = data[0];
+      uint8_t state;
+      static uint8_t state_old = 0xff;
       if (len != 2)
         break;
-      if (data[1] == 0)
+
+      state = (data[1] == 0) ? 0 : 1;
+      if (state_old != state)
       {
-        motor_control_mode = MOTOR_CONTROL_AUTO;
-        Serial.println("MOTOR_CONTROL_AUTO");
+        if (state == 0)
+        {
+          motor_control_mode = MOTOR_CONTROL_AUTO;
+          Serial.println("MOTOR_CONTROL_AUTO");
+        }
+        else
+        {
+          motor_control_mode = MOTOR_CONTROL_MANUAL;
+          Serial.println("MOTOR_CONTROL_MANUAL");
+        }
       }
-      else
-      {
-        motor_control_mode = MOTOR_CONTROL_MANUAL;
-        Serial.println("MOTOR_CONTROL_MANUAL");
-      }
+      state_old = state;
       break;
     }
     }
