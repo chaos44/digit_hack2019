@@ -1,5 +1,6 @@
 #include <bluefruit.h>
 #include "motor_control.h"
+#include "motor_control_onboard.h"
 #include "raspi_com.h"
 
 // Device Name: Maximum 30 bytes
@@ -66,11 +67,11 @@ void setup()
   Serial.begin(115200);
   Serial.println("Start");
   motor_init();
+  motor_onboard_init();
 }
 
 void loop()
 {
-
   uint8_t btnRead;
   while (btnAction > 0)
   {
@@ -148,6 +149,7 @@ static void ExecLineThingdCmd(uint8_t *write_cmd)
         if ((motor_no != motor_no_old) || (speed != speed_old))
         {
           cmd_motor(motor_no, speed);
+          motor_control_onboard(motor_no, speed);
         }
         motor_no_old = motor_no;
         speed_old = speed;
