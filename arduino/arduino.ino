@@ -170,6 +170,7 @@ static void ExecLineThingdCmd(uint8_t *write_cmd)
       if ((servo_no_old != servo_no) || (angle_old != angle) || (speed_old != speed))
       {
         cmd_servo(servo_no, angle, speed);
+        servo_control_onboard(servo_no, angle, speed);
       }
       servo_no_old = servo_no;
       angle_old = angle;
