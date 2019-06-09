@@ -1,14 +1,16 @@
 #include <bluefruit.h>
-#include <Servo.h>
 
 #include <nrf.h>
 
-// #define SERVO0 11
-// #define SERVO1 16
-// #define SERVO2 14
-// Servo servo0;
-// Servo servo1;
-// Servo servo2;
+#define SERVO0_PIN 13
+#define SERVO1_PIN 16
+#define SERVO2_PIN 14
+#define SERVO3_PIN 15
+
+#define SERVO0_DUTY_IDX 0
+#define SERVO1_DUTY_IDX 1
+#define SERVO2_DUTY_IDX 2
+#define SERVO3_DUTY_IDX 3
 
 #define B_IA_PIN 2
 #define B_IB_PIN 3
@@ -20,43 +22,27 @@
 #define A_IA_DUTY_IDX 2
 #define A_IB_DUTY_IDX 3
 
-#define B_IA_DUTY 16000
-#define B_IB_DUTY 16000
-#define A_IA_DUTY 16000
-#define A_IB_DUTY 16000
+#define PWM0_COUNTERTOP 16000
+#define PWM1_COUNTERTOP 20000
 
-static uint16_t pwm_seq[4] = {B_IA_DUTY, B_IB_DUTY, A_IA_DUTY,
-                              A_IB_DUTY};
+static uint16_t pwm0_seq[4];
+static uint16_t pwm1_seq[4];
 
 static void start_pwm0(void);
-static void set_duty(uint8_t pin, uint8_t duty);
+static uint32_t calc_pwm0_comp(uint8_t duty);
+static void set_pwm0_duty(uint8_t pin, uint8_t duty);
 
-static void set_duty(uint8_t pin, uint8_t duty)
-{
-  uint32_t comp = 16000 - (16000 * duty) / 100;
-  switch (pin)
-  {
-  case B_IA_PIN:
-    pwm_seq[B_IA_DUTY_IDX] = comp;
-    NRF_PWM0->TASKS_SEQSTART[0] = 1;
-    break;
-  case B_IB_PIN:
-    pwm_seq[B_IB_DUTY_IDX] = comp;
-    NRF_PWM0->TASKS_SEQSTART[0] = 1;
-    break;
-  case A_IA_PIN:
-    pwm_seq[A_IA_DUTY_IDX] = comp;
-    NRF_PWM0->TASKS_SEQSTART[0] = 1;
-    break;
-  case A_IB_PIN:
-    pwm_seq[A_IB_DUTY_IDX] = comp;
-    NRF_PWM0->TASKS_SEQSTART[0] = 1;
-    break;
-  }
-}
+static void start_pwm1(void);
+static uint32_t calc_pwm1_comp(uint8_t angle);
+static void set_pwm1_duty(uint8_t pin, uint8_t duty);
 
 static void start_pwm0(void)
 {
+  pwm0_seq[B_IA_DUTY_IDX] = calc_pwm0_comp(100);
+  pwm0_seq[B_IB_DUTY_IDX] = calc_pwm0_comp(100);
+  pwm0_seq[A_IA_DUTY_IDX] = calc_pwm0_comp(100);
+  pwm0_seq[A_IB_DUTY_IDX] = calc_pwm0_comp(100);
+  
   NRF_PWM0->PSEL.OUT[0] = (B_IA_PIN << PWM_PSEL_OUT_PIN_Pos) |
                           (PWM_PSEL_OUT_CONNECT_Connected << PWM_PSEL_OUT_CONNECT_Pos);
   NRF_PWM0->PSEL.OUT[1] = (B_IB_PIN << PWM_PSEL_OUT_PIN_Pos) |
@@ -69,15 +55,103 @@ static void start_pwm0(void)
   NRF_PWM0->ENABLE = (PWM_ENABLE_ENABLE_Enabled << PWM_ENABLE_ENABLE_Pos);
   NRF_PWM0->MODE = (PWM_MODE_UPDOWN_Up << PWM_MODE_UPDOWN_Pos);
   NRF_PWM0->PRESCALER = (PWM_PRESCALER_PRESCALER_DIV_1 << PWM_PRESCALER_PRESCALER_Pos);
-  NRF_PWM0->COUNTERTOP = (16000 << PWM_COUNTERTOP_COUNTERTOP_Pos); //1 msec
+  NRF_PWM0->COUNTERTOP = (PWM0_COUNTERTOP << PWM_COUNTERTOP_COUNTERTOP_Pos); //1 msec
   NRF_PWM0->LOOP = (PWM_LOOP_CNT_Disabled << PWM_LOOP_CNT_Pos);
   NRF_PWM0->DECODER = (PWM_DECODER_LOAD_Individual << PWM_DECODER_LOAD_Pos) |
                       (PWM_DECODER_MODE_RefreshCount << PWM_DECODER_MODE_Pos);
-  NRF_PWM0->SEQ[0].PTR = ((uint32_t)(pwm_seq) << PWM_SEQ_PTR_PTR_Pos);
-  NRF_PWM0->SEQ[0].CNT = ((sizeof(pwm_seq) / sizeof(uint16_t)) << PWM_SEQ_CNT_CNT_Pos);
+  NRF_PWM0->SEQ[0].PTR = ((uint32_t)(pwm0_seq) << PWM_SEQ_PTR_PTR_Pos);
+  NRF_PWM0->SEQ[0].CNT = ((sizeof(pwm0_seq) / sizeof(uint16_t)) << PWM_SEQ_CNT_CNT_Pos);
   NRF_PWM0->SEQ[0].REFRESH = 0;
   NRF_PWM0->SEQ[0].ENDDELAY = 0;
   NRF_PWM0->TASKS_SEQSTART[0] = 1;
+}
+
+static uint32_t calc_pwm0_comp(uint8_t duty)
+{
+  uint32_t comp = PWM0_COUNTERTOP - (PWM0_COUNTERTOP * duty) / 100;
+  return comp;
+}
+
+static void set_pwm0_duty(uint8_t pin, uint8_t duty)
+{
+  switch (pin)
+  {
+  case B_IA_PIN:
+    pwm0_seq[B_IA_DUTY_IDX] = calc_pwm0_comp(duty);
+    NRF_PWM0->TASKS_SEQSTART[0] = 1;
+    break;
+  case B_IB_PIN:
+    pwm0_seq[B_IB_DUTY_IDX] = calc_pwm0_comp(duty);
+    NRF_PWM0->TASKS_SEQSTART[0] = 1;
+    break;
+  case A_IA_PIN:
+    pwm0_seq[A_IA_DUTY_IDX] = calc_pwm0_comp(duty);
+    NRF_PWM0->TASKS_SEQSTART[0] = 1;
+    break;
+  case A_IB_PIN:
+    pwm0_seq[A_IB_DUTY_IDX] = calc_pwm0_comp(duty);
+    NRF_PWM0->TASKS_SEQSTART[0] = 1;
+    break;
+  }
+}
+
+static void start_pwm1(void)
+{
+  pwm1_seq[SERVO0_DUTY_IDX] = calc_pwm1_comp(90);
+  pwm1_seq[SERVO1_DUTY_IDX] = calc_pwm1_comp(90);
+  pwm1_seq[SERVO2_DUTY_IDX] = calc_pwm1_comp(90);
+  pwm1_seq[SERVO3_DUTY_IDX] = calc_pwm1_comp(90);
+  
+  NRF_PWM1->PSEL.OUT[0] = (SERVO0_PIN << PWM_PSEL_OUT_PIN_Pos) |
+                          (PWM_PSEL_OUT_CONNECT_Connected << PWM_PSEL_OUT_CONNECT_Pos);
+  NRF_PWM1->PSEL.OUT[1] = (SERVO1_PIN << PWM_PSEL_OUT_PIN_Pos) |
+                          (PWM_PSEL_OUT_CONNECT_Connected << PWM_PSEL_OUT_CONNECT_Pos);
+  NRF_PWM1->PSEL.OUT[2] = (SERVO2_PIN << PWM_PSEL_OUT_PIN_Pos) |
+                          (PWM_PSEL_OUT_CONNECT_Connected << PWM_PSEL_OUT_CONNECT_Pos);
+  NRF_PWM1->PSEL.OUT[3] = (SERVO3_PIN << PWM_PSEL_OUT_PIN_Pos) |
+                          (PWM_PSEL_OUT_CONNECT_Connected << PWM_PSEL_OUT_CONNECT_Pos);
+
+  NRF_PWM1->ENABLE = (PWM_ENABLE_ENABLE_Enabled << PWM_ENABLE_ENABLE_Pos);
+  NRF_PWM1->MODE = (PWM_MODE_UPDOWN_Up << PWM_MODE_UPDOWN_Pos);
+  NRF_PWM1->PRESCALER = (PWM_PRESCALER_PRESCALER_DIV_16 << PWM_PRESCALER_PRESCALER_Pos);
+  NRF_PWM1->COUNTERTOP = (PWM1_COUNTERTOP << PWM_COUNTERTOP_COUNTERTOP_Pos); //20 msec
+  NRF_PWM1->LOOP = (PWM_LOOP_CNT_Disabled << PWM_LOOP_CNT_Pos);
+  NRF_PWM1->DECODER = (PWM_DECODER_LOAD_Individual << PWM_DECODER_LOAD_Pos) |
+                      (PWM_DECODER_MODE_RefreshCount << PWM_DECODER_MODE_Pos);
+  NRF_PWM1->SEQ[0].PTR = ((uint32_t)(pwm1_seq) << PWM_SEQ_PTR_PTR_Pos);
+  NRF_PWM1->SEQ[0].CNT = ((sizeof(pwm1_seq) / sizeof(uint16_t)) << PWM_SEQ_CNT_CNT_Pos);
+  NRF_PWM1->SEQ[0].REFRESH = 0;
+  NRF_PWM1->SEQ[0].ENDDELAY = 0;
+  NRF_PWM1->TASKS_SEQSTART[0] = 1;
+}
+
+static uint32_t calc_pwm1_comp(uint8_t duty)
+{
+  uint32_t comp = PWM1_COUNTERTOP - (PWM1_COUNTERTOP * duty) / 100;
+  return comp;
+}
+
+static void set_pwm1_duty(uint8_t pin, uint8_t duty)
+{
+  switch (pin)
+  {
+  case SERVO0_PIN:
+    pwm1_seq[SERVO0_DUTY_IDX] = calc_pwm1_comp(duty);
+    NRF_PWM1->TASKS_SEQSTART[0] = 1;
+    break;
+  case SERVO1_PIN:
+    pwm1_seq[SERVO1_DUTY_IDX] = calc_pwm1_comp(duty);
+    NRF_PWM1->TASKS_SEQSTART[0] = 1;
+    break;
+  case SERVO2_PIN:
+    pwm1_seq[SERVO2_DUTY_IDX] = calc_pwm1_comp(duty);
+    NRF_PWM1->TASKS_SEQSTART[0] = 1;
+    break;
+  case SERVO3_PIN:
+    pwm1_seq[SERVO3_DUTY_IDX] = calc_pwm1_comp(duty);
+    NRF_PWM1->TASKS_SEQSTART[0] = 1;
+    break;
+  }
 }
 
 void motor_onboard_init(void)
@@ -87,11 +161,18 @@ void motor_onboard_init(void)
   pinMode(A_IA_PIN, OUTPUT);
   pinMode(A_IB_PIN, OUTPUT);
 
-  // servo0.attach(SERVO0);
-  // servo1.attach(SERVO1);
-  // servo2.attach(SERVO2);
+  pinMode(SERVO0_PIN, OUTPUT);
+  pinMode(SERVO1_PIN, OUTPUT);
+  pinMode(SERVO2_PIN, OUTPUT);
+  pinMode(SERVO3_PIN, OUTPUT);
 
   start_pwm0();
+  start_pwm1();
+
+  set_pwm1_duty(SERVO0_PIN, 50);
+  set_pwm1_duty(SERVO1_PIN, 50);
+  set_pwm1_duty(SERVO2_PIN, 50);
+  set_pwm1_duty(SERVO3_PIN, 50);
 }
 
 void servo_control_onboard(uint8_t servo, uint8_t angle, uint8_t speed)
@@ -135,36 +216,36 @@ void motor_control_onboard(uint8_t motor, uint8_t speed)
   {
     if (_speed > 0)
     {
-      set_duty(A_IA_PIN, _speed);
-      set_duty(A_IB_PIN, 0);
+      set_pwm0_duty(A_IA_PIN, _speed);
+      set_pwm0_duty(A_IB_PIN, 0);
     }
     else if (_speed == 0)
     {
-      set_duty(A_IA_PIN, 0);
-      set_duty(A_IB_PIN, 0);
+      set_pwm0_duty(A_IA_PIN, 0);
+      set_pwm0_duty(A_IB_PIN, 0);
     }
     else
     {
-      set_duty(A_IA_PIN, 0);
-      set_duty(A_IB_PIN, -_speed);
+      set_pwm0_duty(A_IA_PIN, 0);
+      set_pwm0_duty(A_IB_PIN, -_speed);
     }
   }
   else if (motor == 1)
   {
     if (_speed > 0)
     {
-      set_duty(B_IA_PIN, _speed);
-      set_duty(B_IB_PIN, 0);
+      set_pwm0_duty(B_IA_PIN, _speed);
+      set_pwm0_duty(B_IB_PIN, 0);
     }
     else if (_speed == 0)
     {
-      set_duty(B_IA_PIN, 0);
-      set_duty(B_IB_PIN, 0);
+      set_pwm0_duty(B_IA_PIN, 0);
+      set_pwm0_duty(B_IB_PIN, 0);
     }
     else
     {
-      set_duty(B_IA_PIN, 0);
-      set_duty(B_IB_PIN, -_speed);
+      set_pwm0_duty(B_IA_PIN, 0);
+      set_pwm0_duty(B_IB_PIN, -_speed);
     }
   }
 }
