@@ -38,10 +38,10 @@ static void set_pwm1_duty(uint8_t pin, uint8_t duty);
 
 static void start_pwm0(void)
 {
-  pwm0_seq[B_IA_DUTY_IDX] = calc_pwm0_comp(100);
-  pwm0_seq[B_IB_DUTY_IDX] = calc_pwm0_comp(100);
-  pwm0_seq[A_IA_DUTY_IDX] = calc_pwm0_comp(100);
-  pwm0_seq[A_IB_DUTY_IDX] = calc_pwm0_comp(100);
+  pwm0_seq[B_IA_DUTY_IDX] = calc_pwm0_comp(0);
+  pwm0_seq[B_IB_DUTY_IDX] = calc_pwm0_comp(0);
+  pwm0_seq[A_IA_DUTY_IDX] = calc_pwm0_comp(0);
+  pwm0_seq[A_IB_DUTY_IDX] = calc_pwm0_comp(0);
 
   NRF_PWM0->PSEL.OUT[0] = (B_IA_PIN << PWM_PSEL_OUT_PIN_Pos) |
                           (PWM_PSEL_OUT_CONNECT_Connected << PWM_PSEL_OUT_CONNECT_Pos);
@@ -172,10 +172,20 @@ void motor_onboard_init(void)
   pinMode(A_IA_PIN, OUTPUT);
   pinMode(A_IB_PIN, OUTPUT);
 
+  digitalWrite(B_IA_PIN, LOW);
+  digitalWrite(B_IB_PIN, LOW);
+  digitalWrite(A_IA_PIN, LOW);
+  digitalWrite(A_IB_PIN, LOW);
+
   pinMode(SERVO0_PIN, OUTPUT);
   pinMode(SERVO1_PIN, OUTPUT);
   pinMode(SERVO2_PIN, OUTPUT);
   pinMode(SERVO3_PIN, OUTPUT);
+
+  digitalWrite(SERVO0_PIN, LOW);
+  digitalWrite(SERVO1_PIN, LOW);
+  digitalWrite(SERVO2_PIN, LOW);
+  digitalWrite(SERVO3_PIN, LOW);
 
   start_pwm0();
   start_pwm1();
