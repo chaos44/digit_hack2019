@@ -42,7 +42,7 @@ static void start_pwm0(void)
   pwm0_seq[B_IB_DUTY_IDX] = calc_pwm0_comp(100);
   pwm0_seq[A_IA_DUTY_IDX] = calc_pwm0_comp(100);
   pwm0_seq[A_IB_DUTY_IDX] = calc_pwm0_comp(100);
-  
+
   NRF_PWM0->PSEL.OUT[0] = (B_IA_PIN << PWM_PSEL_OUT_PIN_Pos) |
                           (PWM_PSEL_OUT_CONNECT_Connected << PWM_PSEL_OUT_CONNECT_Pos);
   NRF_PWM0->PSEL.OUT[1] = (B_IB_PIN << PWM_PSEL_OUT_PIN_Pos) |
@@ -101,7 +101,7 @@ static void start_pwm1(void)
   pwm1_seq[SERVO1_DUTY_IDX] = calc_pwm1_comp(90);
   pwm1_seq[SERVO2_DUTY_IDX] = calc_pwm1_comp(90);
   pwm1_seq[SERVO3_DUTY_IDX] = calc_pwm1_comp(90);
-  
+
   NRF_PWM1->PSEL.OUT[0] = (SERVO0_PIN << PWM_PSEL_OUT_PIN_Pos) |
                           (PWM_PSEL_OUT_CONNECT_Connected << PWM_PSEL_OUT_CONNECT_Pos);
   NRF_PWM1->PSEL.OUT[1] = (SERVO1_PIN << PWM_PSEL_OUT_PIN_Pos) |
@@ -125,10 +125,13 @@ static void start_pwm1(void)
   NRF_PWM1->TASKS_SEQSTART[0] = 1;
 }
 
-static uint32_t calc_pwm1_comp(uint8_t duty)
+static uint32_t calc_pwm1_comp(uint8_t angle)
 {
-  uint32_t comp = PWM1_COUNTERTOP - (PWM1_COUNTERTOP * duty) / 100;
-  return comp;
+  //0.5ms:0度, 1.45ms:90度, 2.4ms:180度
+  uint32_t comp;
+  comp = map(angle, 0, 180, 500, 2400);
+
+  return PWM1_COUNTERTOP - comp;
 }
 
 static void set_pwm1_duty(uint8_t pin, uint8_t duty)
@@ -136,21 +139,29 @@ static void set_pwm1_duty(uint8_t pin, uint8_t duty)
   switch (pin)
   {
   case SERVO0_PIN:
+  {
     pwm1_seq[SERVO0_DUTY_IDX] = calc_pwm1_comp(duty);
     NRF_PWM1->TASKS_SEQSTART[0] = 1;
     break;
+  }
   case SERVO1_PIN:
+  {
     pwm1_seq[SERVO1_DUTY_IDX] = calc_pwm1_comp(duty);
     NRF_PWM1->TASKS_SEQSTART[0] = 1;
     break;
+  }
   case SERVO2_PIN:
+  {
     pwm1_seq[SERVO2_DUTY_IDX] = calc_pwm1_comp(duty);
     NRF_PWM1->TASKS_SEQSTART[0] = 1;
     break;
+  }
   case SERVO3_PIN:
+  {
     pwm1_seq[SERVO3_DUTY_IDX] = calc_pwm1_comp(duty);
     NRF_PWM1->TASKS_SEQSTART[0] = 1;
     break;
+  }
   }
 }
 
@@ -168,11 +179,6 @@ void motor_onboard_init(void)
 
   start_pwm0();
   start_pwm1();
-
-  set_pwm1_duty(SERVO0_PIN, 50);
-  set_pwm1_duty(SERVO1_PIN, 50);
-  set_pwm1_duty(SERVO2_PIN, 50);
-  set_pwm1_duty(SERVO3_PIN, 50);
 }
 
 void servo_control_onboard(uint8_t servo, uint8_t angle, uint8_t speed)
@@ -187,18 +193,19 @@ void servo_control_onboard(uint8_t servo, uint8_t angle, uint8_t speed)
 
   if (servo == 0)
   {
-    // servo0.write(angle);
+    set_pwm1_duty(SERVO0_PIN, angle);
   }
   else if (servo == 1)
   {
-    // servo1.write(angle);
+    set_pwm1_duty(SERVO1_PIN, angle);
   }
   else if (servo == 2)
   {
-    // servo2.write(angle);
+    set_pwm1_duty(SERVO2_PIN, angle);
   }
-  else
+  else if (servo == 3)
   {
+    set_pwm1_duty(SERVO3_PIN, angle);
   }
 }
 
